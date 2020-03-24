@@ -146,6 +146,9 @@ class Lecture:
         self.teacher_ids = lecture['teacherIds']
         self.section_ids = lecture['atomicSectionIds']
 
+        # clashing lectures
+        self.noncurrent_lecture_ids = set()
+
 
     def __repr__(self):
         return(
