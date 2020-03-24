@@ -16,6 +16,8 @@ import json
 
 from resources import *
 
+from clashes import set_lectures_noncurrency
+
 
 def read_json(json_file):
     '''
@@ -69,5 +71,8 @@ def read_json(json_file):
             resources.courses[course_id].elective_pair_ids.add(
                 serial_elective['id']
             )
+
+    # set lectures noncurrency
+    set_lectures_noncurrency(resources)
 
     return resources
