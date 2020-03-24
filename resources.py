@@ -165,3 +165,13 @@ class Resources:
         self.teachers = {}
         self.sections = {}
         self.lectures = {}
+
+
+    def __repr__(self):
+        return(
+            f'Rooms: {len(self.rooms)}\n'
+            f'Courses: {len(self.courses)}\n'
+            f'Teachers: {len(self.teachers)}\n'
+            f'Sections: {len(self.sections)}\n'
+            f'Lectures: {len(self.lectures)}\n'
+        )
