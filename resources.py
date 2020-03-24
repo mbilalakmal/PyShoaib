@@ -153,3 +153,15 @@ class Lecture:
             f'Name: {self.name}\n'
             f'Strength: {self.strength}\n'
         )
+
+    
+class Resources:
+    '''
+    Contains all the resources.
+    '''
+    def __init__(self):
+        self.rooms = {}
+        self.courses = {}
+        self.teachers = {}
+        self.sections = {}
+        self.lectures = {}
