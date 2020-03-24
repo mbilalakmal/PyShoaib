@@ -18,6 +18,8 @@ import pandas as pd
 from parameters import Parameters
 from resources import *
 
+import random
+
 
 @total_ordering
 class Schedule:
@@ -52,6 +54,10 @@ class Schedule:
         '''
         pass
         # for each lecture*duration assign a row in entries
+        for lecture in self.resources.lectures.values():
+            print(lecture)
+
+            self._assign_lecture(lecture)
 
         # turn on dirty bit
         self.dirty_bit = True
@@ -107,10 +113,167 @@ class Schedule:
 
         # calculate fitness
 
+        import time
+        # 1. Pauli Exclusion
+        a = time.time()
+        # count unique room and time slots
+        # unique_slots = self.entries.groupby(
+        #     ['day', 'hour', 'room_id']
+        #     ).count()
+
+        # unique_slots = len(self.entries.groupby(
+        #     ['day', 'hour', 'room_id']
+        #     ))
+
+        unique_slots = self.entries.groupby(
+            ['day', 'hour', 'room_id']
+            ).ngroups
+
+        c = time.time()
+
+        total_slots = len(self.entries.index)
+
+        b = time.time()
+
+        print('unique', unique_slots)
+        print('total', total_slots)
+        print(b-a, c-a)
+
+        # 2. capacity
+
+        capacity_slots = 0
+
+        course_slots = 0
+        course_rooms = 0
+
+        teacher_slots = 0
+        teacher_rooms = 0
+
+        lecture_slots = 0
+
+        a = time.time()
+        for row in self.entries.itertuples(index=False, name=None):
+            # print(row)
+            day, hour, room_id, lecture_id = row
+            lecture = self.resources.lectures[lecture_id]
+            room = self.resources.rooms[room_id]
+            if room.capacity >= lecture.strength:
+                capacity_slots += 1
+
+            course = self.resources.courses[lecture.course_id]
+            if course.available_slots[day][hour] == True:
+                course_slots += 1
+            if room_id in course.available_room_ids:
+                course_rooms += 1
+
+            teachers = [
+                self.resources.teachers[t_id] for t_id in lecture.teacher_ids
+            ]
+
+            nteachers = len(teachers)
+
+            for teacher in teachers:
+                if teacher.available_slots[day][hour] == True:
+                    teacher_slots += 1/nteachers
+                if room_id in teacher.available_room_ids:
+                    teacher_rooms += 1/nteachers
+
+            concurrent_lecture_ids = set(self.entries[
+                (self.entries['day'] == day) &
+                (self.entries['hour'] == hour)
+            ]['lecture_id'])
+
+            if concurrent_lecture_ids.isdisjoint(lecture.noncurrent_lecture_ids) == True:
+                lecture_slots += 1
+
+        b = time.time()
+        print('cap', capacity_slots)
+        print('courses', course_slots)
+        print('courser', course_rooms)
+        print('teachers', teacher_slots)
+        print('teacherr', teacher_rooms)
+        print('lectures', lecture_slots)
+        print(b-a)
+
+
+
 
     #----------------------------------------
     # PRIVATE METHODS
     #----------------------------------------
+
+
+    def _assign_lecture(self, lecture: Lecture):
+        '''
+        Assigns room and time slots of `lecture`.
+        '''
+
+        course = self.resources.courses[lecture.course_id]
+        duration = course.duration
+
+        if course.is_lab_course == True:
+            slots = self._get_random_lab_slots(duration)
+        else:
+            slots = self._get_random_theory_slots(duration)
+
+        # add the fourth column
+        for slot in slots:
+            slot.append(lecture.id)
+
+        # slots is a list of lists
+        self.entries = self.entries.append(
+            pd.DataFrame(slots, columns=self.entries.columns)
+            )
+
+
+    def _get_random_lab_slots(self, duration):
+        '''
+        Returns `duration` room and time slots for a lab.
+        '''
+        slots = []
+
+        day = random.choice(
+            range(self.parameters.week_days)
+        )
+
+        room_id = random.choice(
+            list(self.resources.rooms.keys())
+        )
+
+        hour = random.choice(
+            range(self.parameters.daily_hours - duration + 1)
+        )
+
+        for i in range(duration):
+            slot = [day, hour+i, room_id]
+            slots.append(slot)
+
+        return slots
+
+
+    def _get_random_theory_slots(self, duration):
+        '''
+        Returns `duration` room and time slots for a theory.
+        '''
+        slots = []
+
+        days = random.sample(
+            range(self.parameters.week_days), k=duration
+        )
+
+        room_ids = random.choices(
+            list(self.resources.rooms.keys()), k=duration
+        )
+
+        hours = random.choices(
+            range(self.parameters.daily_hours), k=duration
+        )
+
+        for i in range(duration):
+            slot = [days[i], hours[i], room_ids[i]]
+            slots.append(slot)
+
+        return slots
 
 
     def __gt__(self, other: 'Chromsome'):
