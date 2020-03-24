@@ -11,9 +11,12 @@
 # (C) 2020 PyShoaib
 # -----------------------------------------------------------
 
-from resources import *
-from parameters import Parameters
 from functools import total_ordering
+
+import pandas as pd
+
+from parameters import Parameters
+from resources import *
 
 
 @total_ordering
@@ -28,12 +31,18 @@ class Schedule:
         # fitness representing constraints fulfilled [0.0 - 1.0]
         self.fitness = 0.0
 
+        # if dirty then re-evaluate fitness
+        self.dirty_bit = False
+
         # aggregate resources and parameters
         self.resources = resources
         self.parameters = parameters
 
         # data structure for the actual schedule
-        # TODO pandas single dataframe
+        self.entries = pd.DataFrame(
+            columns=['day', 'hour', 'room_id', 'lecture_id']
+        )
+
 
     def initialize(self):
         '''
@@ -42,6 +51,10 @@ class Schedule:
         Constraints are not considered in this step.
         '''
         pass
+        # for each lecture*duration assign a row in entries
+
+        # turn on dirty bit
+        self.dirty_bit = True
 
 
     def mutate(self):
@@ -51,6 +64,10 @@ class Schedule:
         Fitness of the schedule must be re-evaluated after this step.
         '''
         pass
+        # for MSIZE*lectures modify a row in entries
+
+        # turn on dirty bit
+        self.dirty_bit = True
 
 
     def crossover(self, parent1: 'Schedule', parent2: 'Schedule'):
@@ -60,6 +77,10 @@ class Schedule:
         Fitness of the schedule must be re-evaluated after this step.
         '''
         pass
+        # copy half rows(lecture-wise) from each parent
+
+        # turn on dirty bit
+        self.dirty_bit = True
 
 
     def copy(self, parent: 'Schedule'):
@@ -69,6 +90,9 @@ class Schedule:
         Fitness is equal to the fitness of `parent`.
         '''
         pass
+        # copy the whole dataframe and fitness
+
+        self.fitness = parent.fitness
 
 
     def calculate_fitness(self):
@@ -76,6 +100,12 @@ class Schedule:
         Checks each constraints and assigns score based on fulfilled.
         '''
         pass
+
+        # check if fitness needs to be evaluated
+        if self.dirty_bit == False:
+            return
+
+        # calculate fitness
 
 
     #----------------------------------------
