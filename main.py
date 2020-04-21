@@ -1,4 +1,8 @@
 from flask import Flask, request, escape
+import firebase_admin
+from firebase_admin import credentials
+from firebase_admin import firestore
+
 from schedule import Schedule
 from resources import Resources
 from parameters import Parameters
@@ -7,12 +11,23 @@ from parameters import Parameters
 # called `app` in `main.py`.
 app = Flask(__name__)
 
+# Use a service account
+cred = credentials.Certificate('./serviceAccount.json')
+firebase_admin.initialize_app(cred)
+
+db = firestore.client()
+
 
 @app.route('/', methods=['POST'])
 def generate_timetable():
+    # Firestore example
+    users_ref = db.collection(u'constraints')
+    docs = users_ref.stream()
+    for doc in docs:
+        print(u'{} => {}'.format(doc.id, doc.to_dict()))
+    # Request example
     request_json = request.get_json(silent=True)
     request_args = request.args
-
     if request_json and 'name' in request_json:
         name = request_json['name']
     elif request_args and 'name' in request_args:
