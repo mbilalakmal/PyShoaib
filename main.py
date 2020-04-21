@@ -1,19 +1,15 @@
+from flask import Flask, request, escape
 from schedule import Schedule
 from resources import Resources
 from parameters import Parameters
-from flask import escape
+
+# If `entrypoint` is not defined in app.yaml, App Engine will look for an app
+# called `app` in `main.py`.
+app = Flask(__name__)
 
 
-def generate_timetable(request):
-    """HTTP Cloud Function.
-    Args:
-        request (flask.Request): The request object.
-        <http://flask.pocoo.org/docs/1.0/api/#flask.Request>
-    Returns:
-        The response text, or any set of values that can be turned into a
-        Response object using `make_response`
-        <http://flask.pocoo.org/docs/1.0/api/#flask.Flask.make_response>.
-    """
+@app.route('/', methods=['POST'])
+def generate_timetable():
     request_json = request.get_json(silent=True)
     request_args = request.args
 
@@ -24,3 +20,11 @@ def generate_timetable(request):
     else:
         name = 'World'
     return 'Hello {}!'.format(escape(name))
+
+
+if __name__ == '__main__':
+    # This is used when running locally only. When deploying to Google App
+    # Engine, a webserver process such as Gunicorn will serve the app. This
+    # can be configured by adding an `entrypoint` to app.yaml.
+    app.run(host='127.0.0.1', port=8080, debug=True)
+# [END gae_python37_app]
