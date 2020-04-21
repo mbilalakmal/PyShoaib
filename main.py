@@ -1,8 +1,10 @@
-from flask import Flask, request, escape
 import firebase_admin
+import time
+from threading import Thread
+from flask import Flask, request, escape
 from firebase_admin import credentials
 from firebase_admin import firestore
-
+# Local Imports
 from schedule import Schedule
 from resources import Resources
 from parameters import Parameters
@@ -20,6 +22,14 @@ db = firestore.client()
 
 @app.route('/', methods=['POST'])
 def generate_timetable():
+    # Background Example
+    def do_work(value):
+        # do something that takes a long time
+        time.sleep(value)
+        print("Background function completed")
+    thread = Thread(target=do_work, kwargs={
+                    'value': request.args.get('value', 5)})
+    thread.start()
     # Firestore example
     users_ref = db.collection(u'constraints')
     docs = users_ref.stream()
