@@ -18,7 +18,7 @@ sockets = Sockets(app)
 # Use a service account
 # firebase_admin.initialize_app()
 
-db = firestore.client()
+# db = firestore.client()
 
 # Websockets
 @sockets.route('/chat')
