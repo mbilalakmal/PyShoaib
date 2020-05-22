@@ -1,10 +1,10 @@
-import firebase_admin
+# import firebase_admin
 import time
 from threading import Thread
 from flask import Flask, request, escape, render_template
 from flask_sockets import Sockets
 # from firebase_admin import credentials
-from firebase_admin import firestore
+# from firebase_admin import firestore
 # Local Imports
 from schedule import Schedule
 from resources import Resources
@@ -16,7 +16,7 @@ app = Flask(__name__)
 sockets = Sockets(app)
 
 # Use a service account
-firebase_admin.initialize_app()
+# firebase_admin.initialize_app()
 
 db = firestore.client()
 
