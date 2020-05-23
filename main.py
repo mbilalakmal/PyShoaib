@@ -1,7 +1,7 @@
 import time
 import json
 from json import JSONDecodeError
-from threading import Thread
+from multiprocessing.dummy import Process
 from flask import Flask
 from flask_sockets import Sockets
 # Local Imports
@@ -19,6 +19,7 @@ generated = False  # Waiting for user to get
 timetables = None  # Generated timetables
 timetables_progresses = 0  # Current timetables progress
 clients = None  # Reference to all the clients connected
+thread = None  # Track generation
 
 # Only one endpoint for everything
 @sockets.route('/connect')
@@ -39,6 +40,8 @@ def connect(ws):
                 response = generate_timetables()
             elif message == 'get-timetables-progress':
                 response = get_timetables_progresses()
+            elif message == 'cancel-generation':
+                response = cancel_generation()
             elif message == 'get-timetables':
                 response = get_timetables()
             elif message == 'delete-timetables':
@@ -90,9 +93,9 @@ def generate_in_background(value):
     global timetables
     global timetables_progresses
     # do something that takes a long time
-    for i in range(4):
+    for i in range(20):
         time.sleep(value)
-        timetables_progresses += 25
+        timetables_progresses += 5
         broadcast_to_clients({
             "code": 201,
             "message": 'attached-are-timetables-progresses',
@@ -134,6 +137,7 @@ def generate_in_background(value):
 
 
 def generate_timetables():
+    global thread
     global generating
     if generating:
         return {
@@ -145,10 +149,10 @@ def generate_timetables():
             "code": 301,
             "message": 'timetables-have-been-generated'
         }
-    thread = Thread(
+    thread = Process(
         target=generate_in_background,
         kwargs={
-            'value': 5
+            'value': 0.25
         }
     )
     thread.start()
@@ -177,6 +181,26 @@ def get_timetables():
         "code": 404,
         "message": 'no-generated-timetables-found'
     }
+
+
+def cancel_generation():
+    if (thread and thread.is_alive()):
+        try:
+            thread.terminate()
+            return {
+                "code": 200,
+                "message": 'canceled-timetables-generation'
+            }
+        except:
+            return {
+                "code": 400,
+                "message": 'could-not-cancel-generation'
+            }
+    else:
+        return {
+            "code": 401,
+            "message": 'could-not-cancel-generation'
+        }
 
 
 def delete_timetables():
