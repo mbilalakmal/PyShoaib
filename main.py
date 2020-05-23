@@ -16,7 +16,7 @@ sockets = Sockets(app)
 # Global Variables
 generating = False  # Currently busy
 generated = False  # Waiting for user to get
-timetables_progress = 0  # Current timetables progress
+timetables_progresses = 0  # Current timetables progress
 clients = None  # Reference to all the clients connected
 
 # Only one endpoint for everything
@@ -37,7 +37,7 @@ def connect(ws):
             elif message == 'generate-timetables':
                 response = generate_timetables()
             elif message == 'get-timetables-progress':
-                response = get_timetables_progress()
+                response = get_timetables_progresses()
             elif message == 'get-timetables':
                 response = get_timetables()
             elif message == 'delete-timetables':
@@ -67,28 +67,28 @@ def get_generating():
     }
 
 
-def get_timetables_progress():
+def get_timetables_progresses():
     return {
         "code": 200,
         "message": 'attached-are-timetables-progresses',
-        "timetablesProgress": timetables_progress
+        "timetablesProgresses": timetables_progresses
     }
 
 
 def generate_in_background(value):
     global generating
     global generated
-    global timetables_progress
+    global timetables_progresses
     # do something that takes a long time
     for i in range(4):
         time.sleep(value)
-        timetables_progress += 25
+        timetables_progresses += 25
         try:
             for client in clients:
                 client.ws.send(json.dumps({
                     "code": 201,
                     "message": 'attached-are-timetables-progresses',
-                    "timetablesProgress": timetables_progress
+                    "timetablesProgresses": timetables_progresses
                 }))
         except:
             print("Some error happened while sending stuff to clients")
@@ -166,7 +166,7 @@ def get_timetables():
 
 def delete_timetables():
     global generated
-    global timetables_progress
+    global timetables_progresses
     if generating:
         # TODO: Stop generating
         return {
@@ -175,7 +175,7 @@ def delete_timetables():
         }
     if generated:
         generated = False
-        timetables_progress = 0
+        timetables_progresses = 0
         return {
             "code": 203,
             "message": 'deleted-timetables'
