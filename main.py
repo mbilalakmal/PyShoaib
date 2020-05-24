@@ -67,6 +67,8 @@ def broadcast_to_clients(response):
     try:
         for client in clients:
             client.ws.send(json.dumps(response))
+    except TypeError:
+        print('Type Error: ' + json.dumps(response))
     except:
         print("Some error happened while sending stuff to clients")
 
