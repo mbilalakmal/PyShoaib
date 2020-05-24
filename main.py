@@ -217,6 +217,7 @@ def delete_timetables():
     if generated:
         generated = False
         timetables_progresses = 0
+        timetables = None
         return {
             "code": 203,
             "message": 'deleted-timetables'
