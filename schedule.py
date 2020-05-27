@@ -30,21 +30,15 @@ class Schedule:
     """
 
     def __init__(self, resources: Resources, parameters: Parameters):
-
-        # fitness representing constraints fulfilled [0.0 - 1.0]
         self.fitness = 0.0
 
-        # if dirty then re-evaluate fitness
-        self.dirty_bit = False
+        self.dirty_bit = False  # # indicate current fitness is obsolete
 
-        # aggregate resources and parameters
         self.resources = resources
         self.parameters = parameters
 
         # data structure for the actual schedule
-        self.entries = pd.DataFrame(
-            columns=['day', 'hour', 'room_id', 'lecture_id']
-        )
+        self.entries = pd.DataFrame(columns=['day', 'hour', 'room_id', 'lecture_id'])
 
     def initialize(self):
         """
@@ -79,7 +73,22 @@ class Schedule:
 
         Fitness of the schedule must be re-evaluated after this step.
         """
-        pass
+        lecture_ids = list(self.resources.lectures.keys())
+        random.shuffle(lecture_ids)
+        parent1_ids = lecture_ids[:int(len(lecture_ids) / 2)]
+        parent2_ids = lecture_ids[int(len(lecture_ids) / 2):]
+
+        self.entries = self.entries.iloc[0:0]
+
+        # pick from parent1
+        self.entries = self.entries.append(
+            parent1.entries.loc[parent1.entries['lecture_id'].isin(parent1_ids), :], ignore_index=True
+        )
+
+        # pick from parent2
+        self.entries = self.entries.append(
+            parent2.entries.loc[parent2.entries['lecture_id'].isin(parent2_ids), :], ignore_index=True
+        )
 
         self.dirty_bit = True  # indicate current fitness is obsolete
 
@@ -89,9 +98,7 @@ class Schedule:
 
         Fitness is equal to the fitness of `parent`.
         """
-        pass
-        # copy the whole dataframe and fitness
-
+        self.entries = pd.DataFrame.copy(parent.entries, deep=True)
         self.fitness = parent.fitness
 
     def calculate_fitness(self):
@@ -103,18 +110,22 @@ class Schedule:
 
         total_slots = len(self.entries.index)
 
+        score = pd.Series(index=[
+            'unique_slots',
+            'capacity_rooms',
+            'course_slots',
+            'course_rooms',
+            'teacher_slots',
+            'teacher_rooms',
+            'lecture_slots',
+        ])
+        score[:] = 0
+
         # 1. Pauli Exclusion
-        unique_slots = self.entries.groupby(
+        unique_groups = self.entries.groupby(
             ['day', 'hour', 'room_id']
         ).count()
-        unique_slots = unique_slots[unique_slots == 1].sum()[0]
-
-        capacity_rooms = 0
-        course_slots = 0
-        course_rooms = 0
-        teacher_slots = 0
-        teacher_rooms = 0
-        lecture_slots = 0
+        score.unique_slots = unique_groups[unique_groups == 1].sum()[0]
 
         for _, row in self.entries.iterrows():
             day, hour, room_id, lecture_id = row
@@ -129,31 +140,30 @@ class Schedule:
                 self.entries.loc[
                     (self.entries['day'] == day) &
                     (self.entries['hour'] == hour)
-                ]['lecture_id']
+                    ]['lecture_id']
             )
 
-            capacity_rooms += (room.capacity >= lecture.strength)
-            course_slots += course.available_slots[day][hour]
-            course_rooms += (room_id in course.available_room_ids)
+            score.capacity_rooms += (room.capacity >= lecture.strength)
+            score.course_slots += course.available_slots[day][hour]
+            score.course_rooms += (room_id in course.available_room_ids)
 
             for teacher in teachers:
-                teacher_slots += (teacher.available_slots[day][hour]) / len(teachers)
-                teacher_rooms += (room_id in teacher.available_room_ids) / len(teachers)
+                score.teacher_slots += (teacher.available_slots[day][hour]) / len(teachers)
+                score.teacher_rooms += (room_id in teacher.available_room_ids) / len(teachers)
 
-            lecture_slots += concurrent_l_ids.isdisjoint(lecture.noncurrent_lecture_ids)
+            score.lecture_slots += concurrent_l_ids.isdisjoint(lecture.noncurrent_lecture_ids)
 
-        print(f'UniqueS: {unique_slots}\n'
-              f'CapacityR: {capacity_rooms}\n'
-              f'CourseS: {course_slots}\n'
-              f'CourseR: {course_rooms}\n'
-              f'TeacherS: {teacher_slots}\n'
-              f'TeacherR: {teacher_rooms}\n'
-              f'LectureS: {lecture_slots}\n')
+        print(f'UniqueS: {score.unique_slots}\n'
+              f'CapacityR: {score.capacity_rooms}\n'
+              f'CourseS: {score.course_slots}\n'
+              f'CourseR: {score.course_rooms}\n'
+              f'TeacherS: {score.teacher_slots}\n'
+              f'TeacherR: {score.teacher_rooms}\n'
+              f'LectureS: {score.lecture_slots}\n')
 
-        score = (unique_slots + capacity_rooms + course_slots +
-                 course_rooms + teacher_slots + teacher_rooms + lecture_slots)
-        score /= (total_slots * 7)
-        print(f'score: {score}')
+        self.fitness = score.mean() / total_slots
+        # print(self.fitness)
+        self.dirty_bit = False
 
     # ----------------------------------------
     # PRIVATE METHODS
@@ -165,43 +175,37 @@ class Schedule:
         """
 
         course = self.resources.courses[lecture.course_id]
-        duration = course.duration
 
         if course.is_lab_course:
-            slots = self._get_random_lab_slots(duration)
+            slots = self._get_random_lab_slots(course.duration)
         else:
-            slots = self._get_random_theory_slots(duration)
+            slots = self._get_random_theory_slots(course.duration)
 
         # add the fourth column
         for slot in slots:
             slot.append(lecture.id)
 
         # slots is a list of lists
-        self.entries = self.entries.append(
-            pd.DataFrame(slots, columns=self.entries.columns)
-        )
+        self.entries = self.entries.append(pd.DataFrame(slots, columns=self.entries.columns))
 
     def _get_random_lab_slots(self, duration):
         """
         Returns `duration` room and time slots for a lab.
         """
-        slots = []
+        # slots = []
 
-        day = random.choice(
-            range(self.parameters.week_days)
-        )
+        day = random.choice(range(self.parameters.week_days))
 
-        room_id = random.choice(
-            list(self.resources.rooms.keys())
-        )
+        room_id = random.choice(list(self.resources.rooms.keys()))
 
         hour = random.choice(
             range(self.parameters.daily_hours - duration + 1)
         )
 
-        for i in range(duration):
-            slot = [day, hour + i, room_id]
-            slots.append(slot)
+        slots = [[day, hour + i, room_id] for i in range(duration)]
+        # for i in range(duration):
+        #     slot = [day, hour + i, room_id]
+        #     slots.append(slot)
 
         return slots
 
@@ -209,23 +213,18 @@ class Schedule:
         """
         Returns `duration` room and time slots for a theory.
         """
-        slots = []
+        # slots = []
 
-        days = random.sample(
-            range(self.parameters.week_days), k=duration
-        )
+        days = random.sample(range(self.parameters.week_days), k=duration)
 
-        room_ids = random.choices(
-            list(self.resources.rooms.keys()), k=duration
-        )
+        room_ids = random.choices(list(self.resources.rooms.keys()), k=duration)
 
-        hours = random.choices(
-            range(self.parameters.daily_hours), k=duration
-        )
+        hours = random.choices(range(self.parameters.daily_hours), k=duration)
 
-        for i in range(duration):
-            slot = [days[i], hours[i], room_ids[i]]
-            slots.append(slot)
+        slots = [[days[i], hours[i], room_ids[i]] for i in range(duration)]
+        # for i in range(duration):
+        #     slot = [days[i], hours[i], room_ids[i]]
+        #     slots.append(slot)
 
         return slots
 
