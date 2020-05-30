@@ -25,11 +25,15 @@ def read_json(json_file):
 
     Returns `Resources` object.
     '''
-    resources = Resources()
 
     with open(json_file, 'r') as file:
         serial_resources = json.load(file)
 
+    return extract_resources(serial_resources)
+
+
+def extract_resources(serial_resources):
+    resources = Resources()
     serial_rooms = serial_resources['rooms']
     serial_courses = serial_resources['courses']
     serial_teachers = serial_resources['teachers']

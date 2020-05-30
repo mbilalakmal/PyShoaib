@@ -5,6 +5,7 @@ from multiprocessing.dummy import Process
 from flask import Flask
 from flask_sockets import Sockets
 # Local Imports
+from resources_parser import extract_resources
 from schedule import Schedule
 from resources import Resources
 from parameters import Parameters
@@ -37,7 +38,9 @@ def connect(ws):
             if message == 'get-generating':
                 response = get_generating()
             elif message == 'generate-timetables':
-                response = generate_timetables()
+                response = generate_timetables(
+                    extract_resources(request_json['timetableRequest'])
+                )
             elif message == 'get-timetables-progress':
                 response = get_timetables_progresses()
             elif message == 'cancel-generation':
@@ -89,14 +92,14 @@ def get_timetables_progresses():
     }
 
 
-def generate_in_background(value):
+def generate_in_background(resources):
     global generating
     global generated
     global timetables
     global timetables_progresses
     # do something that takes a long time
     for i in range(20):
-        time.sleep(value)
+        time.sleep(0.25)
         timetables_progresses += 5
         broadcast_to_clients({
             "code": 201,
@@ -138,7 +141,7 @@ def generate_in_background(value):
     generated = True
 
 
-def generate_timetables():
+def generate_timetables(resources):
     global thread
     global generating
     if generating:
@@ -154,7 +157,7 @@ def generate_timetables():
     thread = Process(
         target=generate_in_background,
         kwargs={
-            'value': 0.25
+            'resources': resources
         }
     )
     thread.start()
