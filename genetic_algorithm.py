@@ -15,30 +15,89 @@
 
 from schedule import Schedule
 from parameters import Parameters
-
-import pandas as pd
+from resources import Resources
 import numpy as np
 
 
 class GeneticAlgorithm:
 
-    def __int__(self):
-        pass
+    def __init__(self, resources: Resources, parameters: Parameters):
+        self.resources = resources
+        self.parameters = parameters
+
+        self.generation = 0
+        self.optimum_reached = False
+        self.best_fitness = 0.0
+        self.best_schedule = None
+
+        self._population = np.empty(
+            shape=parameters.population_size,
+            dtype=Schedule
+        )
 
     def run(self):
-        pass
+        self._initialize()
+        while(
+            self.optimum_reached is False and
+            self.generation < self.parameters.maximum_generations
+        ):
+            self._reproduce()
+            self.generation += 1
+        return self.optimum_reached
 
     def describe(self):
         pass
 
     def _initialize(self):
-        pass
+        """
+        Initialize the population of schedules.
+        """
+        for idx in range(self.parameters.population_size):
+            self._population[idx] = Schedule(self.resources, self.parameters)
+            self._population[idx].initialize()
+            self._population[idx].calculate_fitness()
+
+        self._track_best()
 
     def _reproduce(self):
-        pass
+        population = np.empty_like(self._population)
 
-    def _tournament_selection(self):
-        pass
+        for idx in range(self.parameters.population_size):
+
+            # crossover
+            parent1, parent2 = self._tournament_selection(), self._tournament_selection()
+
+            while parent1 is parent2:
+                parent2 = self._tournament_selection()
+
+            child = Schedule(self.resources, self.parameters)
+
+            if np.random.binomial(1, self.parameters.crossover_rate):
+                child.crossover(parent1, parent2)
+            else:
+                child.copy(np.random.choice([parent1, parent2]))
+
+            # mutation
+            if np.random.binomial(1, self.parameters.mutation_rate):
+                child.mutate()
+
+            child.calculate_fitness()
+
+            population[idx] = child
+
+        self._population = population
+        self._track_best()
+
+    def _tournament_selection(self, pressure: int = 4):
+        if pressure >= self.parameters.population_size or pressure < 1:
+            pressure = 1
+
+        return np.amax(np.random.choice(self._population, size=pressure))
 
     def _track_best(self):
-        pass
+
+        self.best_schedule = np.amax(self._population)
+        self.best_fitness = np.amax(self._population).fitness
+
+        if self.best_fitness == 1.0:
+            self.optimum_reached = True
