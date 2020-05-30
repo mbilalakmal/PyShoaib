@@ -101,6 +101,8 @@ class Schedule:
         self.entries = pd.DataFrame.copy(parent.entries, deep=True)
         self.fitness = parent.fitness
 
+        self.dirty_bit = False
+
     def calculate_fitness(self):
         """
         Checks each constraints and assigns score based on fulfilled.
@@ -153,13 +155,13 @@ class Schedule:
 
             score.lecture_slots += concurrent_l_ids.isdisjoint(lecture.noncurrent_lecture_ids)
 
-        print(f'UniqueS: {score.unique_slots}\n'
-              f'CapacityR: {score.capacity_rooms}\n'
-              f'CourseS: {score.course_slots}\n'
-              f'CourseR: {score.course_rooms}\n'
-              f'TeacherS: {score.teacher_slots}\n'
-              f'TeacherR: {score.teacher_rooms}\n'
-              f'LectureS: {score.lecture_slots}\n')
+        # print(f'UniqueS: {score.unique_slots}\n'
+        #       f'CapacityR: {score.capacity_rooms}\n'
+        #       f'CourseS: {score.course_slots}\n'
+        #       f'CourseR: {score.course_rooms}\n'
+        #       f'TeacherS: {score.teacher_slots}\n'
+        #       f'TeacherR: {score.teacher_rooms}\n'
+        #       f'LectureS: {score.lecture_slots}\n')
 
         self.fitness = score.mean() / total_slots
         # print(self.fitness)
