@@ -17,14 +17,15 @@ import json
 from resources import *
 
 from clashes import set_lectures_noncurrency
+from resources import Resources
 
 
 def read_json(json_file):
-    '''
+    """
     Reads resources from `json_file`.
 
     Returns `Resources` object.
-    '''
+    """
 
     with open(json_file, 'r') as file:
         serial_resources = json.load(file)
@@ -33,7 +34,7 @@ def read_json(json_file):
 
 
 def extract_resources(serial_resources):
-    resources = Resources()
+    resources: Resources = Resources()
     serial_rooms = serial_resources['rooms']
     serial_courses = serial_resources['courses']
     serial_teachers = serial_resources['teachers']
