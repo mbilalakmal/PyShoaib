@@ -30,12 +30,22 @@ class Schedule:
     """
 
     def __init__(self, resources: Resources, parameters: Parameters):
-        self.fitness = 0.0
-
-        self.dirty_bit = False  # # indicate current fitness is obsolete
-
         self.resources = resources
         self.parameters = parameters
+
+        self.fitness = 0.0
+        self.dirty_bit = False  # indicate current fitness is obsolete
+
+        self.fulfilled = dict.fromkeys(
+            ['unique_slots',
+             'capacity_rooms',
+             'course_slots',
+             'course_rooms',
+             'teacher_slots',
+             'teacher_rooms',
+             'lecture_slots', ],
+            False
+        )
 
         # data structure for the actual schedule
         self.entries = pd.DataFrame(columns=['day', 'hour', 'room_id', 'lecture_id'])
@@ -112,15 +122,7 @@ class Schedule:
 
         total_slots = len(self.entries.index)
 
-        score = pd.Series(index=[
-            'unique_slots',
-            'capacity_rooms',
-            'course_slots',
-            'course_rooms',
-            'teacher_slots',
-            'teacher_rooms',
-            'lecture_slots',
-        ])
+        score = pd.Series(index=self.fulfilled.keys())
         score[:] = 0
 
         # 1. Pauli Exclusion
@@ -174,7 +176,6 @@ class Schedule:
         Returns: A dict containing lecture_ids as keys
 
         """
-        # copy entries with column names matching frontend
         entries = self.entries.copy(deep=True)
         entries = entries.rename(columns={'hour': 'time', 'room_id': 'roomId', 'lecture_id': 'id'})
 
@@ -182,18 +183,10 @@ class Schedule:
         entries_list = []
 
         for lecture_id, lecture_group in groupby_lectures:
-            lecture_dict = dict(
-                id=lecture_id,
-                assignedSlots=lecture_group.drop(columns=['id']).to_dict(orient='records')
-            )
+            lecture_group = lecture_group.drop(columns=['id']).to_dict(orient='records')
+            lecture_dict = dict(id=lecture_id, assignedSlots=lecture_group)
 
             entries_list.append(lecture_dict)
-            # print(lecture_id)
-            # lecture_group = lecture_group.drop(columns=['id'])
-            # print(lecture_group)
-            # print()
-            # print(lecture_group.to_dict(orient='records'))
-            # print()
 
         return entries_list
 
