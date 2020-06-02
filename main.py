@@ -235,5 +235,5 @@ if __name__ == '__main__':
     print("""
             This can not be run directly because the Flask development server does not
             support web sockets. Instead, use gunicorn:
-            gunicorn -b 127.0.0.1:8080 -k flask_sockets.worker main:app
+            gunicorn -b 127.0.0.1:8080 -k flask_sockets.worker -t 2147483647 main:app
     """)
