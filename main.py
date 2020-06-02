@@ -48,6 +48,8 @@ def connect(ws):
                 response = get_timetables()
             elif message == 'delete-timetables':
                 response = delete_timetables()
+            elif message == 'prevent-timeout':
+                continue
             else:
                 response = {
                     "code": 404,
