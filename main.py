@@ -6,8 +6,7 @@ from flask import Flask
 from flask_sockets import Sockets
 # Local Imports
 from resources_parser import extract_resources
-from schedule import Schedule
-from resources import Resources
+from genetic_algorithm import GeneticAlgorithm
 from parameters import Parameters
 
 # App settings
@@ -97,48 +96,38 @@ def generate_in_background(resources):
     global generated
     global timetables
     global timetables_progresses
-    # do something that takes a long time
-    for i in range(20):
-        time.sleep(0.25)
-        timetables_progresses += 5
+    ga = GeneticAlgorithm(resources, Parameters())
+    time.sleep(0)
+    ga._initialize()
+    while(
+        ga.optimum_reached is False and
+        ga.generation < ga.parameters.maximum_generations
+    ):
+        ga._reproduce()
+        timetables_progresses = ga.best_fitness
         broadcast_to_clients({
             "code": 201,
             "message": 'attached-are-timetables-progresses',
             "timetablesProgresses": timetables_progresses
         })
-    # Dummy timetable
-    timetables = [
-        # CS Timetable
-        [
-            # CS Lecture (Department is calculated using the coure)
-            {
-                "id": '07oOq6yVxgeM3Af0l1js',
-                "name": 'GR3',  # For ease only (GR1, C, B2)
-                "strength": 45,  # Strength for lecture
-                # Course reference - backend will implement symmetry function to ensure the referenced courses can also clash with this one
-                "courseId": 'um3MTOBhstk2h8nbruIa',
-                # Teacher reference
-                "teacherIds": ['8iJPHOKGicitf3iU1oUs'],
-                # Sections include
-                "atomicSectionIds": ["CS2018E2", "CS2018E1", "CS2018F1", "CS2018F2"],
-                "assignedSlots": [
-                    {
-                        "day": 0,
-                        "roomId": "32sEbfyomtp6F5jprc5a",  # Room Reference
-                        "time": 0
-                    }
-                ]
-            }
-        ]
-    ]
-    # Completed timetable
-    broadcast_to_clients({
-        "code": 200,
-        "message": 'attached-are-timetables',
-        "timetables": timetables
-    })
+        ga.generation += 1
+    if ga.optimum_reached:
+        generated = True
+        # TODO: Convert to front end compatible version
+        timetables = ga.best_schedule.entries
+        broadcast_to_clients({
+            "code": 200,
+            "message": 'attached-are-timetables',
+            "timetables": timetables
+        })
+    else:
+        generated = False
+        broadcast_to_clients({
+            "code": 500,
+            "message": 'max-generations-reached',
+            "timetables": timetables
+        })
     generating = False
-    generated = True
 
 
 def generate_timetables(resources):
