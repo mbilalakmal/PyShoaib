@@ -29,32 +29,10 @@ def read_json(json_file):
     with open(json_file, 'r') as file:
         serial_resources = json.load(file)
 
-    return _extract_resources(serial_resources)
+    return extract_resources(serial_resources)
 
 
-def read_parameters(json_file):
-    """
-    Reads parameters from `json_file`.
-
-    Returns `Parameters` object.
-    """
-    with open(json_file, 'r') as file:
-        serial_parameters = json.load(file)
-
-    return Parameters(
-        population_size=serial_parameters.get('population_size'),
-        maximum_generations=serial_parameters.get('maximum_generations'),
-        mutation_rate=serial_parameters.get('mutation_rate'),
-        mutation_size=serial_parameters.get('mutation_size'),
-        crossover_rate=serial_parameters.get('crossover_rate'),
-        crossover_size=serial_parameters.get('crossover_size'),
-        selection_pressure=serial_parameters.get('selection_pressure'),
-        week_days=serial_parameters.get('week_days'),
-        daily_hours=serial_parameters.get('daily_hours'),
-    )
-
-
-def _extract_resources(serial_resources):
+def extract_resources(serial_resources):
     resources: Resources = Resources()
     serial_rooms = serial_resources['rooms']
     serial_courses = serial_resources['courses']
@@ -100,3 +78,29 @@ def _extract_resources(serial_resources):
     set_lectures_noncurrency(resources)  # set lectures' noncurrency
 
     return resources
+
+
+def read_parameters(json_file):
+    """
+    Reads parameters from `json_file`.
+
+    Returns `Parameters` object.
+    """
+    with open(json_file, 'r') as file:
+        serial_parameters = json.load(file)
+
+    return extract_parameters(serial_parameters)
+
+
+def extract_parameters(serial_parameters):
+    return Parameters(
+        population_size=serial_parameters.get('population_size'),
+        maximum_generations=serial_parameters.get('maximum_generations'),
+        mutation_rate=serial_parameters.get('mutation_rate'),
+        mutation_size=serial_parameters.get('mutation_size'),
+        crossover_rate=serial_parameters.get('crossover_rate'),
+        crossover_size=serial_parameters.get('crossover_size'),
+        selection_pressure=serial_parameters.get('selection_pressure'),
+        week_days=serial_parameters.get('week_days'),
+        daily_hours=serial_parameters.get('daily_hours'),
+    )
