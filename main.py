@@ -104,6 +104,7 @@ def generate_in_background(resources):
         ga.generation < ga.parameters.maximum_generations
     ):
         ga._reproduce()
+        time.sleep(0)
         timetables_progresses = ga.best_fitness
         broadcast_to_clients({
             "code": 201,
@@ -113,8 +114,7 @@ def generate_in_background(resources):
         ga.generation += 1
     if ga.optimum_reached:
         generated = True
-        # TODO: Convert to front end compatible version
-        timetables = ga.best_schedule.entries
+        timetables = ga.best_schedule.to_dict()
         broadcast_to_clients({
             "code": 200,
             "message": 'attached-are-timetables',
