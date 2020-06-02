@@ -114,9 +114,9 @@ def generate_in_background(resources):
             "timetablesProgresses": timetables_progresses
         })
         ga.generation += 1
+    timetables = ga.best_schedule.to_dict()
     if ga.optimum_reached:
         generated = True
-        timetables = ga.best_schedule.to_dict()
         broadcast_to_clients({
             "code": 200,
             "message": 'attached-are-timetables',
