@@ -37,9 +37,9 @@ class GeneticAlgorithm:
 
     def run(self):
         self._initialize()
-        while(
-            self.optimum_reached is False and
-            self.generation < self.parameters.maximum_generations
+        while (
+                self.optimum_reached is False and
+                self.generation < self.parameters.maximum_generations
         ):
             self._reproduce()
             self.generation += 1
@@ -88,16 +88,12 @@ class GeneticAlgorithm:
         self._population = population
         self._track_best()
 
-    def _tournament_selection(self, pressure: int = 4):
-        if pressure >= self.parameters.population_size or pressure < 1:
-            pressure = 1
-
+    def _tournament_selection(self):
+        pressure = self.parameters.selection_pressure
         return np.amax(np.random.choice(self._population, size=pressure))
 
     def _track_best(self):
-
         self.best_schedule = np.amax(self._population)
         self.best_fitness = np.amax(self._population).fitness
 
-        if self.best_fitness == 1.0:
-            self.optimum_reached = True
+        self.optimum_reached = self.best_fitness == 1.0
