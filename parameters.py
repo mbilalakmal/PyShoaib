@@ -23,12 +23,13 @@ class Parameters:
 
     def __init__(
             self,
-            population_size: int = 20,
-            maximum_generations: int = 60,
+            population_size: int = 10,
+            maximum_generations: int = 20,
             mutation_rate: float = 0.05,
             mutation_size: float = 0.10,
             crossover_rate: float = 0.80,
             crossover_size: float = 0.50,
+            selection_pressure: int = 4,
             week_days: int = 5,
             daily_hours: int = 8
     ):
@@ -38,6 +39,7 @@ class Parameters:
         self.mutation_size = mutation_size
         self.crossover_rate = crossover_rate
         self.crossover_size = crossover_size
+        self.selection_pressure = selection_pressure
         self.week_days = week_days
         self.daily_hours = daily_hours
 
@@ -49,6 +51,7 @@ class Parameters:
             f'Mutation Size: {self.mutation_size}\n'
             f'Crossover Rate: {self.crossover_rate}\n'
             f'Crossover Size: {self.crossover_size}\n'
+            f'Selection Pressure: {self.selection_pressure}\n'
             f'Weekdays: {self.week_days}\n'
             f'Daily hours: {self.daily_hours}\n'
         )
