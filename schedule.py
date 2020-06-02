@@ -167,6 +167,36 @@ class Schedule:
         # print(self.fitness)
         self.dirty_bit = False
 
+    def to_dict(self):
+        """
+        Convert the entries object to a python dictionary.
+
+        Returns: A dict containing lecture_ids as keys
+
+        """
+        # copy entries with column names matching frontend
+        entries = self.entries.copy(deep=True)
+        entries = entries.rename(columns={'hour': 'time', 'room_id': 'roomId', 'lecture_id': 'id'})
+
+        groupby_lectures = entries.groupby(['id'])
+        entries_list = []
+
+        for lecture_id, lecture_group in groupby_lectures:
+            lecture_dict = dict(
+                id=lecture_id,
+                assignedSlots=lecture_group.drop(columns=['id']).to_dict(orient='records')
+            )
+
+            entries_list.append(lecture_dict)
+            # print(lecture_id)
+            # lecture_group = lecture_group.drop(columns=['id'])
+            # print(lecture_group)
+            # print()
+            # print(lecture_group.to_dict(orient='records'))
+            # print()
+
+        return entries_list
+
     # ----------------------------------------
     # PRIVATE METHODS
     # ----------------------------------------
