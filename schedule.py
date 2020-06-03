@@ -117,19 +117,20 @@ class Schedule:
         """
         Checks each constraints and assigns score based on fulfilled.
         """
-        if not self.dirty_bit:
+        if self.dirty_bit is False:
             return
+        self.dirty_bit = False
 
         total_slots = len(self.entries.index)
 
-        score = pd.Series(index=self.fulfilled.keys())
-        score[:] = 0
+        scores = pd.Series(0, index=self.fulfilled.keys())
+        # scores[:] = 0
 
-        # 1. Pauli Exclusion
+        # 1. Pauli Exclusion [no two entries have the same day, hour, and room_id]
         unique_groups = self.entries.groupby(
             ['day', 'hour', 'room_id']
         ).count()
-        score.unique_slots = unique_groups[unique_groups == 1].sum()[0]
+        scores.unique_slots = unique_groups[unique_groups == 1].sum()[0]
 
         for _, row in self.entries.iterrows():
             day, hour, room_id, lecture_id = row
@@ -140,6 +141,7 @@ class Schedule:
 
             teachers = [self.resources.teachers[t_id] for t_id in lecture.teacher_ids]
 
+            # entries with the same day and hour
             concurrent_l_ids = set(
                 self.entries.loc[
                     (self.entries['day'] == day) &
@@ -147,27 +149,35 @@ class Schedule:
                     ]['lecture_id']
             )
 
-            score.capacity_rooms += (room.capacity >= lecture.strength)
-            score.course_slots += course.available_slots[day][hour]
-            score.course_rooms += (room_id in course.available_room_ids)
+            # 2. Room's capacity is greater than lecture's strength
+            scores.capacity_rooms += (room.capacity >= lecture.strength)
+            # 3. Course is available at this day and hour
+            scores.course_slots += course.available_slots[day][hour]
+            # 4. Course is available at this room
+            scores.course_rooms += (room_id in course.available_room_ids)
 
-            for teacher in teachers:
-                score.teacher_slots += (teacher.available_slots[day][hour]) / len(teachers)
-                score.teacher_rooms += (room_id in teacher.available_room_ids) / len(teachers)
+            teacher_slots = pd.Series(index=range(len(teachers)), dtype=bool)
+            teacher_rooms = pd.Series(index=range(len(teachers)), dtype=bool)
+            for idx, teacher in enumerate(teachers):
+                # 5. Teacher is available at this day and hour
+                teacher_slots[idx] = teacher.available_slots[day][hour]
+                # 6. Teacher is available at this room
+                teacher_rooms[idx] = room_id in teacher.available_room_ids
+            scores.teacher_slots += teacher_slots.mean()
+            scores.teacher_rooms += teacher_rooms.mean()
 
-            score.lecture_slots += concurrent_l_ids.isdisjoint(lecture.noncurrent_lecture_ids)
+            # 7. No noncurrent lecture at this day and hour
+            scores.lecture_slots += concurrent_l_ids.isdisjoint(lecture.noncurrent_lecture_ids)
 
-        # print(f'UniqueS: {score.unique_slots}\n'
-        #       f'CapacityR: {score.capacity_rooms}\n'
-        #       f'CourseS: {score.course_slots}\n'
-        #       f'CourseR: {score.course_rooms}\n'
-        #       f'TeacherS: {score.teacher_slots}\n'
-        #       f'TeacherR: {score.teacher_rooms}\n'
-        #       f'LectureS: {score.lecture_slots}\n')
+        # scale each score between 0 and 1
+        scores = scores.div(total_slots)
+        # print(scores)
+        # input()
 
-        self.fitness = score.mean() / total_slots
-        # print(self.fitness)
-        self.dirty_bit = False
+        for constraint in self.fulfilled.keys():
+            self.fulfilled[constraint] = scores.loc[constraint]  # == 1.0
+
+        self.fitness = scores.mean()
 
     def to_dict(self):
         """
