@@ -145,6 +145,9 @@ def generate_timetables(resources):
             "code": 301,
             "message": 'timetables-have-been-generated'
         }
+    # Starting generating
+    generating = True
+    timetables_progresses = 0
     thread = Process(
         target=generate_in_background,
         kwargs={
@@ -152,8 +155,6 @@ def generate_timetables(resources):
         }
     )
     thread.start()
-    # Succesfully started generating
-    generating = True
     return {
         "code": 201,
         "message": 'started-generating-timetables'
