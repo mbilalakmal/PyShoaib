@@ -145,11 +145,29 @@ class Lecture:
         # clashing lectures
         self.noncurrent_lecture_ids = set()
 
+        # assigned slots [used for frontend serialization]
+        self.assigned_slots = list()
+
+    def to_dict(self):
+        return dict(
+            id=self.id,
+            name=self.name,
+            strength=self.strength,
+            courseId=self.course_id,
+            teacherIds=self.teacher_ids,
+            atomicSectionIds=self.section_ids,
+            assignedSlots=self.assigned_slots
+        )
+
     def __repr__(self):
         return (
             f'ID: {self.id}\n'
             f'Name: {self.name}\n'
             f'Strength: {self.strength}\n'
+            f'Course ID: {self.course_id}\n'
+            f'Teachers ID: {self.teacher_ids}\n'
+            f'Sections ID: {self.section_ids}\n'
+            f'Noncurrent Lectures ID: {self.noncurrent_lecture_ids}\n'
         )
 
 
@@ -164,6 +182,10 @@ class Resources:
         self.teachers = {}
         self.sections = {}
         self.lectures = {}
+
+    @property
+    def entries(self):
+        return [lecture.to_dict() for lecture in self.lectures.values()]
 
     def __repr__(self):
         return (
