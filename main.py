@@ -114,7 +114,8 @@ def generate_in_background(resources):
             "timetablesProgresses": timetables_progresses
         })
         ga.generation += 1
-    timetables = ga.best_schedule.to_dict()
+    ga.best_schedule.save_slots()
+    timetables = [ga.resources.entries]
     if ga.optimum_reached:
         generated = True
         broadcast_to_clients({
