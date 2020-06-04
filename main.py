@@ -48,6 +48,8 @@ def connect(ws):
                 response = get_timetables()
             elif message == 'delete-timetables':
                 response = delete_timetables()
+            elif message == 'prevent-timeout':
+                continue
             else:
                 response = {
                     "code": 404,
@@ -96,7 +98,7 @@ def generate_in_background(resources):
     global generated
     global timetables
     global timetables_progresses
-    ga = GeneticAlgorithm(resources, Parameters())
+    ga = GeneticAlgorithm(resources, Parameters(maximum_generations=200000))
     time.sleep(0)
     ga._initialize()
     while(
@@ -112,9 +114,10 @@ def generate_in_background(resources):
             "timetablesProgresses": timetables_progresses
         })
         ga.generation += 1
+    ga.best_schedule.save_slots()
+    timetables = [ga.resources.entries]
     if ga.optimum_reached:
         generated = True
-        timetables = ga.best_schedule.to_dict()
         broadcast_to_clients({
             "code": 200,
             "message": 'attached-are-timetables',
@@ -143,6 +146,9 @@ def generate_timetables(resources):
             "code": 301,
             "message": 'timetables-have-been-generated'
         }
+    # Starting generating
+    generating = True
+    timetables_progresses = 0
     thread = Process(
         target=generate_in_background,
         kwargs={
@@ -150,8 +156,6 @@ def generate_timetables(resources):
         }
     )
     thread.start()
-    # Succesfully started generating
-    generating = True
     return {
         "code": 201,
         "message": 'started-generating-timetables'
