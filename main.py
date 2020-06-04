@@ -98,7 +98,7 @@ def generate_in_background(resources):
     global generated
     global timetables
     global timetables_progresses
-    ga = GeneticAlgorithm(resources, Parameters())
+    ga = GeneticAlgorithm(resources, Parameters(maximum_generations=200000))
     time.sleep(0)
     ga._initialize()
     while(
