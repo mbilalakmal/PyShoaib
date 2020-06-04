@@ -35,15 +35,13 @@ class Schedule:
         self.fitness = 0.0
         self.dirty_bit = False  # indicate current fitness is obsolete
 
-        self.fulfilled = dict.fromkeys(
-            ['unique_slots',
-             'capacity_rooms',
-             'course_slots',
-             'course_rooms',
-             'teacher_slots',
-             'teacher_rooms',
-             'lecture_slots', ],
-            False
+        self.scores = Series(
+            index=['unique_slots',
+                   'capacity_rooms',
+                   'course_slots', 'course_rooms',
+                   'teacher_slots', 'teacher_rooms',
+                   'lecture_slots', ],
+            data=0
         )
 
         # data structure for the actual schedule
@@ -68,10 +66,11 @@ class Schedule:
         """
         sample = int(self.parameters.mutation_size * len(self.resources.lectures))
         target_ids = random.sample(self.resources.lectures.keys(), sample)
-        lectures = [self.resources.lectures[target_id] for target_id in target_ids]
 
-        for lecture in lectures:
-            self._remove_lecture(lecture)
+        self._remove_lectures(target_ids)
+
+        for lecture_id in target_ids:
+            lecture = self.resources.lectures[lecture_id]
             self._assign_lecture(lecture)
 
         self.dirty_bit = True  # indicate current fitness is obsolete
@@ -91,12 +90,14 @@ class Schedule:
 
         # pick from parent1
         self.entries = self.entries.append(
-            parent1.entries.loc[parent1.entries['lecture_id'].isin(parent1_ids), :], ignore_index=True
+            parent1.entries.loc[parent1.entries['lecture_id'].isin(parent1_ids), :],
+            ignore_index=True
         )
 
         # pick from parent2
         self.entries = self.entries.append(
-            parent2.entries.loc[parent2.entries['lecture_id'].isin(parent2_ids), :], ignore_index=True
+            parent2.entries.loc[parent2.entries['lecture_id'].isin(parent2_ids), :],
+            ignore_index=True
         )
 
         self.dirty_bit = True  # indicate current fitness is obsolete
@@ -108,6 +109,7 @@ class Schedule:
         Fitness is equal to the fitness of `parent`.
         """
         self.entries = DataFrame.copy(parent.entries, deep=True)
+        self.scores = Series.copy(parent.scores, deep=True)
         self.fitness = parent.fitness
 
         self.dirty_bit = False
@@ -120,13 +122,9 @@ class Schedule:
             return
         self.dirty_bit = False
 
-        total_slots: int = len(self.entries.index)
-
-        scores: Series = Series(0, index=self.fulfilled.keys())
-
         # 1. Pauli Exclusion [no two entries have the same day, hour, and room_id]
         unique_groups = self.entries.groupby(['day', 'hour', 'room_id']).count()
-        scores.unique_slots = unique_groups[unique_groups == 1].sum()[0]
+        self.scores.unique_slots = unique_groups[unique_groups == 1].sum()[0]
 
         for _, row in self.entries.iterrows():
             day, hour, room_id, lecture_id = row
@@ -146,11 +144,11 @@ class Schedule:
             )
 
             # 2. Room's capacity is greater than lecture's strength
-            scores.capacity_rooms += (room.capacity >= lecture.strength)
+            self.scores.capacity_rooms += (room.capacity >= lecture.strength)
             # 3. Course is available at this day and hour
-            scores.course_slots += course.available_slots[day][hour]
+            self.scores.course_slots += course.available_slots[day][hour]
             # 4. Course is available at this room
-            scores.course_rooms += (room_id in course.available_room_ids)
+            self.scores.course_rooms += (room_id in course.available_room_ids)
 
             teacher_slots: Series = Series(index=range(len(teachers)), dtype=bool)
             teacher_rooms: Series = Series(index=range(len(teachers)), dtype=bool)
@@ -159,19 +157,15 @@ class Schedule:
                 teacher_slots[idx] = teacher.available_slots[day][hour]
                 # 6. Teacher is available at this room
                 teacher_rooms[idx] = room_id in teacher.available_room_ids
-            scores.teacher_slots += teacher_slots.mean()
-            scores.teacher_rooms += teacher_rooms.mean()
+            self.scores.teacher_slots += teacher_slots.mean()
+            self.scores.teacher_rooms += teacher_rooms.mean()
 
             # 7. No noncurrent lecture at this day and hour
-            scores.lecture_slots += concurrent_l_ids.isdisjoint(lecture.noncurrent_lecture_ids)
+            self.scores.lecture_slots += concurrent_l_ids.isdisjoint(lecture.noncurrent_lecture_ids)
 
         # scale each score between 0 and 1
-        scores = scores.div(total_slots)
-
-        for constraint in self.fulfilled.keys():
-            self.fulfilled[constraint] = scores.loc[constraint]  # == 1.0
-
-        self.fitness = scores.mean()
+        self.scores = self.scores.div(len(self.entries.index))
+        self.fitness = self.scores.mean()
 
     def save_slots(self):
         """
@@ -228,11 +222,11 @@ class Schedule:
         slots = [[days[i], hours[i], room_ids[i]] for i in range(duration)]
         return slots
 
-    def _remove_lecture(self, lecture: Lecture):
+    def _remove_lectures(self, lecture_ids: list):
         """
-        Remove room and time slots of `lecture`.
+        Remove room and time slots of `lecture_ids`.
         """
-        self.entries = self.entries[self.entries['lecture_id'] != lecture.id]
+        self.entries = self.entries[~self.entries['lecture_id'].isin(lecture_ids)]
 
     def __gt__(self, other: 'Schedule'):
         return self.fitness > other.fitness
