@@ -98,7 +98,7 @@ def generate_in_background(resources):
     global generated
     global timetables
     global timetables_progresses
-    ga = GeneticAlgorithm(resources, Parameters(20, 100, 0.1))
+    ga = GeneticAlgorithm(resources, Parameters(10, 100, 0.1))
     time.sleep(0)
     ga._initialize()
     while(
@@ -108,10 +108,13 @@ def generate_in_background(resources):
         ga._reproduce()
         time.sleep(0)
         timetables_progresses = ga.best_fitness
+        ga.best_schedule.save_slots()
+        timetables = [ga.resources.entries]
         broadcast_to_clients({
             "code": 201,
             "message": 'attached-are-timetables-progresses',
-            "timetablesProgresses": timetables_progresses
+            "timetablesProgresses": timetables_progresses,
+            "timetables": timetables
         })
         ga.generation += 1
     ga.best_schedule.save_slots()
