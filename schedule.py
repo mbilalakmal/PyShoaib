@@ -150,15 +150,19 @@ class Schedule:
             # 4. Course is available at this room
             self.scores.course_rooms += (room_id in course.available_room_ids)
 
-            teacher_slots: Series = Series(index=range(len(teachers)), dtype=bool)
-            teacher_rooms: Series = Series(index=range(len(teachers)), dtype=bool)
-            for idx, teacher in enumerate(teachers):
-                # 5. Teacher is available at this day and hour
-                teacher_slots[idx] = teacher.available_slots[day][hour]
-                # 6. Teacher is available at this room
-                teacher_rooms[idx] = room_id in teacher.available_room_ids
-            self.scores.teacher_slots += teacher_slots.mean()
-            self.scores.teacher_rooms += teacher_rooms.mean()
+            if not teachers:
+                self.scores.teacher_slots += 1
+                self.scores.teacher_rooms += 1
+            else:
+                teacher_slots: Series = Series(index=range(len(teachers)), dtype=bool)
+                teacher_rooms: Series = Series(index=range(len(teachers)), dtype=bool)
+                for idx, teacher in enumerate(teachers):
+                    # 5. Teacher is available at this day and hour
+                    teacher_slots[idx] = teacher.available_slots[day][hour]
+                    # 6. Teacher is available at this room
+                    teacher_rooms[idx] = room_id in teacher.available_room_ids
+                self.scores.teacher_slots += teacher_slots.mean()
+                self.scores.teacher_rooms += teacher_rooms.mean()
 
             # 7. No noncurrent lecture at this day and hour
             self.scores.lecture_slots += concurrent_l_ids.isdisjoint(lecture.noncurrent_lecture_ids)
