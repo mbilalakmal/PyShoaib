@@ -98,11 +98,11 @@ def generate_in_background(resources):
     global generated
     global timetables
     global timetables_progresses
-    ga = GeneticAlgorithm(resources, Parameters(maximum_generations=200000))
+    ga = GeneticAlgorithm(resources, Parameters(20, 100, 0.1))
     time.sleep(0)
     ga._initialize()
     while(
-        ga.optimum_reached is False and
+        ga.optimum_reached == False and
         ga.generation < ga.parameters.maximum_generations
     ):
         ga._reproduce()
@@ -116,15 +116,14 @@ def generate_in_background(resources):
         ga.generation += 1
     ga.best_schedule.save_slots()
     timetables = [ga.resources.entries]
+    generated = True
     if ga.optimum_reached:
-        generated = True
         broadcast_to_clients({
             "code": 200,
             "message": 'attached-are-timetables',
             "timetables": timetables
         })
     else:
-        generated = False
         broadcast_to_clients({
             "code": 500,
             "message": 'max-generations-reached',
